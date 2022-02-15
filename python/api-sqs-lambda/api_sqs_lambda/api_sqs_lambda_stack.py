@@ -15,7 +15,7 @@ class ApiSqsLambdaStack(Stack):
 
         #Create the SQS queue
         queue = sqs.Queue(self, "SQSQueue")
-
+        
         #Create the API GW service role with permissions to call SQS
         rest_api_role = iam.Role(
             self,
@@ -30,6 +30,7 @@ class ApiSqsLambdaStack(Stack):
 
         #Create a resource named "example" on the base API
         api_resource = base_api.root.add_resource('example')
+        create_namespace_resource = base_api.root.add_resource('create_namespace')
 
 
         #Create API Integration Response object: https://docs.aws.amazon.com/cdk/api/latest/python/aws_cdk.aws_apigateway/IntegrationResponse.html
@@ -65,6 +66,7 @@ class ApiSqsLambdaStack(Stack):
             api_resource_sqs_integration,
             method_responses=[method_response]
         )
+    
 
         #Creating Lambda function that will be triggered by the SQS Queue
         sqs_lambda = _lambda.Function(self,'SQSTriggerLambda',
@@ -72,6 +74,16 @@ class ApiSqsLambdaStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_7,
             code=_lambda.Code.from_asset('lambda'),
         )
+
+        #Creating Lambda function that will be triggered by the SQS Queue
+        create_namespace_lambda = _lambda.Function(self,'CreateNamespaceLambda',
+            handler='create_namespace.handler',
+            runtime=_lambda.Runtime.PYTHON_3_7,
+            code=_lambda.Code.from_asset('lambda'),
+        )
+        
+        create_namespace_integration = apigw.LambdaIntegration(create_namespace_lambda)
+        create_namespace_resource.add_method("POST", create_namespace_integration)
 
         #Create an SQS event source for Lambda
         sqs_event_source = lambda_event_source.SqsEventSource(queue)
